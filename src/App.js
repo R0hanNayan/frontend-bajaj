@@ -1,76 +1,118 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 const App = () => {
   const [jsonInput, setJsonInput] = useState('');
   const [responseData, setResponseData] = useState(null);
-  const [getResponse, setGetResponse] = useState(null);
   const [error, setError] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+
+  const handleJsonInputChange = (e) => {
+    setJsonInput(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const parsedInput = JSON.parse(jsonInput);
-      const response = await axios.post('https://backend-bajaj-cml3.onrender.com/bfhl', parsedInput, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.post('https://backend-bajaj-cml3.onrender.com/bfhl', parsedInput);
       setResponseData(response.data);
       setError('');
+      setShowDropdown(true); // Show dropdown after valid submission
     } catch (err) {
       console.error('POST request error:', err);
       setError('Invalid JSON or failed to connect to API');
+      setShowDropdown(false); // Hide dropdown if submission fails
     }
   };
 
-  useEffect(() => {
-    const fetchGetResponse = async () => {
-      try {
-        const response = await axios.get('https://backend-bajaj-cml3.onrender.com/bfhl');
-        setGetResponse(response.data);
-        setError('');
-      } catch (err) {
-        console.error('GET request error:', err);
-        setError('Failed to connect to API for GET request');
-      }
-    };
+  const handleOptionChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
 
-    fetchGetResponse();
-  }, []);
+    if (isChecked) {
+      setSelectedOptions((prev) => [...prev, value]);
+    } else {
+      setSelectedOptions((prev) => prev.filter((option) => option !== value));
+    }
+  };
+
+  const renderFilteredResponse = () => {
+    if (!responseData) return null;
+
+    const { numbers, alphabets, highest_lowercase_alphabet } = responseData;
+    const filteredResponse = {};
+
+    if (selectedOptions.includes('Numbers')) {
+      filteredResponse.numbers = numbers;
+    }
+    if (selectedOptions.includes('Alphabets')) {
+      filteredResponse.alphabets = alphabets;
+    }
+    if (selectedOptions.includes('Highest lowercase alphabet')) {
+      filteredResponse.highest_lowercase_alphabet = highest_lowercase_alphabet;
+    }
+
+    return (
+      <div>
+        {Object.entries(filteredResponse).map(([key, value]) => (
+          <div key={key}>
+            <strong>{key}:</strong> {JSON.stringify(value)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div>
-      <h1>React Frontend with GET and POST</h1>
+      <h1>JSON Input</h1>
       <form onSubmit={handleSubmit}>
-        <input
-          type="text"
+        <textarea
           value={jsonInput}
-          onChange={(e) => setJsonInput(e.target.value)}
-          placeholder="Enter JSON input"
+          onChange={handleJsonInputChange}
+          rows="4"
+          cols="50"
+          placeholder='Enter JSON like {"data": ["A","C","z"]}'
         />
+        <br />
         <button type="submit">Submit</button>
       </form>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      {responseData && (
+      {showDropdown && (
         <div>
-          <h2>POST Response Data:</h2>
-          <p>User ID: {responseData.user_id}</p>
-          <p>Email: {responseData.email}</p>
-          <p>Roll Number: {responseData.roll_number}</p>
-          <p>Numbers: {responseData.numbers.join(', ')}</p>
-          <p>Alphabets: {responseData.alphabets.join(', ')}</p>
-          <p>Highest Lowercase Alphabet: {responseData.highest_lowercase_alphabet.join(', ')}</p>
+          <h2>Select Data to Display:</h2>
+          <label>
+            <input
+              type="checkbox"
+              value="Numbers"
+              onChange={handleOptionChange}
+            />
+            Numbers
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              value="Alphabets"
+              onChange={handleOptionChange}
+            />
+            Alphabets
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              value="Highest lowercase alphabet"
+              onChange={handleOptionChange}
+            />
+            Highest lowercase alphabet
+          </label>
         </div>
       )}
 
-      {getResponse && (
-        <div>
-          <h2>GET Response Data:</h2>
-          <p>Operation Code: {getResponse.operation_code}</p>
-        </div>
-      )}
+      {renderFilteredResponse()}
     </div>
   );
 };
